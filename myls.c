@@ -11,6 +11,10 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
+#ifndef NAME_MAX
+#define NAME_MAX 256
+#endif
+
 #define OPT_STRING "lavrR"
 
 /***************
