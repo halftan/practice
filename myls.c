@@ -70,10 +70,10 @@ int main(int argc, char *argv[])
             do_ls(cwd, flags);
         else
             do_ls(".", flags);
+    } else {
+        for (i = optind; i < argc; ++i)
+            do_ls(argv[i], flags);
     }
-    for (i = optind; i < argc; ++i)
-        do_ls(argv[i], flags);
-
     if (cwd)
         free(cwd);
     return 0;
@@ -112,7 +112,7 @@ void do_ls(char *dirname, int flags) {
 
         if (flags & VERBOSE_OPT) {
             printf("Verbose info\n");
-            printf("dir count: %d, str allocated: %d\n", dir_count, str_allocated);
+            printf("dir count: %zu, str allocated: %zu\n", dir_count, str_allocated);
             for (i = 0; i < dir_count; ++i)
                 printf("%s\n", entries[i]);
             printf("Verbose info end.\n\n");
@@ -133,6 +133,7 @@ void ls_print(char **entries, size_t dir_count, int flags) {
     int i, max_col;
     int width = get_terminal_width();
 
+    printf("the width is: %d\n", width);
     max_col = 0;
     for (i = 0; i < (int)dir_count; ++i)
         max_col = max(strlen(entries[i]), max_col);
