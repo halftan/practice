@@ -37,7 +37,7 @@
 #define MAX(x, y)     x > y ? x : y
 
 #define COLMAJ_IND(b, c_len, c, r) \
-    b[c+r*c_len]
+b[c+r*c_len]
 
 typedef struct entry_stat {
     char        * f_name;
@@ -59,9 +59,8 @@ static     void print_usage(char *argv[]);
 static     void ls_print(entry_stat **entries, size_t dir_count);
 static      int get_terminal_width();
 static     void copy_entry(entry_stat **entries, struct dirent *direntp, size_t dir_count);
-static     void free_entry(entry_stat **entries, size_t count);
-static col_info calc_col_info(entry_stat **entries, size_t count);
-static     void clear_col_info(col_info base);
+static     void free_entry(entry_stat **entries, size_t st_allocated, size_t dir_count);
+static col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf);
 
 // used for qsort
 static      int dname_cmp(const void *, const void *);
@@ -78,28 +77,28 @@ int main(int argc, char *argv[])
 
     while ((opt = getopt(argc, argv, OPT_STRING)) != -1) {
         switch (opt) {
-        case 'v':
-            flags |= VERBOSE_OPT;
-            break;
-        case 'l':
-            flags |= LIST_OPT;
-            break;
-        case 'R':
-            flags |= RECURSIVE_OPT;
-            flags |= MULTI_DIR_OPT;
-            break;
-        case 'r':
-            flags |= REVERSE_OPT;
-            break;
-        case 'a':
-            flags |= ALL_OPT;
-            break;
-        case 'c':
-            flags |= IGCASE_OPT;
-            break;
-        default:
-            print_usage(argv);
-            exit(FAILURE_VAL);
+            case 'v':
+                flags |= VERBOSE_OPT;
+                break;
+            case 'l':
+                flags |= LIST_OPT;
+                break;
+            case 'R':
+                flags |= RECURSIVE_OPT;
+                flags |= MULTI_DIR_OPT;
+                break;
+            case 'r':
+                flags |= REVERSE_OPT;
+                break;
+            case 'a':
+                flags |= ALL_OPT;
+                break;
+            case 'c':
+                flags |= IGCASE_OPT;
+                break;
+            default:
+                print_usage(argv);
+                exit(FAILURE_VAL);
         }
     }
 
@@ -147,7 +146,7 @@ void do_ls(char *dirname) {
             if (st_allocated == dir_count) {
                 st_allocated += 20;
                 entries = (entry_stat**) realloc(entries,
-                        sizeof(entry_stat*) * st_allocated);
+                                                 sizeof(entry_stat*) * st_allocated);
             }
         }
 
@@ -165,7 +164,7 @@ void do_ls(char *dirname) {
             printf("%s:\n", dirname);
         ls_print(entries, dir_count);
 
-        free_entry(entries, st_allocated);
+        free_entry(entries, st_allocated, dir_count);
     }
 
     // chdir back to original directory.
@@ -179,10 +178,10 @@ void ls_print(entry_stat **entries, size_t dir_count) {
     char **pstr;
 
     if (! (flags & LIST_OPT)) {
-        colinfo = calc_col_info(entries, dir_count);
+        calc_col_info(entries, dir_count, &colinfo);
         pstr = (char**) malloc(sizeof(char*) * colinfo.col_count);
         for (i = 0; i < (int)colinfo.col_count; ++i) {
-            pstr[i] = (char*) malloc(sizeof(char*) * NAME_MAX);
+            pstr[i] = (char*) malloc(sizeof(char) * NAME_MAX);
             sprintf(pstr[i], "%%%zus", colinfo.col_len[i]);
         }
 
@@ -191,18 +190,17 @@ void ls_print(entry_stat **entries, size_t dir_count) {
                 printf("%s\n", pstr[i]);
 
         if (flags & REVERSE_OPT) {
-            for (i = dir_count - 1; i >= 0; --i)
+            for (i = (int)dir_count - 1; i >= 0; --i)
                 printf(pstr[i % colinfo.col_count], entries[i]->f_name);
         } else {
             for (i = 0; i < (int)dir_count; ++i)
                 printf(pstr[i % colinfo.col_count], entries[i]->f_name);
         }
 
-        clear_col_info(colinfo);
     }
 
     if (flags & REVERSE_OPT) {
-        for (i = dir_count - 1; i >= 0; --i)
+        for (i = (int)dir_count - 1; i >= 0; --i)
             printf("%s\n", entries[i]->f_name);
     } else
         for (i = 0; i < (int)dir_count; ++i)
@@ -219,12 +217,12 @@ void copy_entry(entry_stat **entries, struct dirent *direntp, size_t dir_count) 
     stat(direntp->d_name, &entries[dir_count]->f_stat);
 }
 
-void free_entry(entry_stat **entries, size_t count) {
+void free_entry(entry_stat **entries, size_t st_allocated, size_t dir_count) {
     size_t i;
-    for (i = 0; i < count; ++i) {
+    for (i = 0; i < dir_count; ++i)
         free(entries[i]->f_name);
+    for (i = 0; i < st_allocated; ++i)
         free(entries[i]);
-    }
     free(entries);
 }
 
@@ -239,9 +237,8 @@ int namlen_cmp(const void *p1, const void *p2) {
     return *(unsigned int *)p2 - *(unsigned int *)p1;
 }
 
-col_info calc_col_info(entry_stat **entries, size_t count) {
+col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf) {
     int i, j, width, cal_width, cal_col_count;
-    col_info info;
     unsigned int *len_info;
 
     len_info = (unsigned int*) malloc(sizeof(unsigned int) * count);
@@ -266,7 +263,7 @@ col_info calc_col_info(entry_stat **entries, size_t count) {
     cal_col_count = i; // set cal_col_count to max possible column count
 
     // set width of each column
-    info.col_len = (size_t*) malloc(sizeof(size_t) * i);
+    buf->col_len = (size_t*) malloc(sizeof(size_t) * i);
     for (i = 0; i < cal_col_count; ++i) {
         int rows = ceil((double) count / (double) cal_col_count);
         unsigned int max_width = 0;
@@ -274,19 +271,19 @@ col_info calc_col_info(entry_stat **entries, size_t count) {
             if (entries[j*cal_col_count+i]->name_len + 2 > max_width)
                 max_width = COLMAJ_IND(entries, cal_col_count, i, j)->name_len + 2;
         }
-        info.col_len[i] = max_width;
+        buf->col_len[i] = max_width;
     }
 
-    // TODO: must return a pointer
-    return info;
-}
+    buf->col_count = cal_col_count;
 
-void clear_col_info(col_info base) {
-    free(base.col_len);
+    return buf;
 }
 
 int get_terminal_width(void) {
     struct winsize w;
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-    return w.ws_col;
+    if (w.ws_col == 0)
+        return 80;
+    else
+        return w.ws_col;
 }
