@@ -14,17 +14,21 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/dir.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
 
 #ifndef NAME_MAX
 #define NAME_MAX 256
 #endif
 
-#define OPT_STRING "lavrcR"
+#define OPT_STRING "lavrchR"
 
 /***************
  *  EXIT CODE  *
  ***************/
 #define FAILURE_VAL 2
+#define SUCCESS_VAL 0
 
 #define LIST_OPT      0x00000001
 #define MULTI_DIR_OPT 0x00000002
@@ -37,7 +41,7 @@
 #define MAX(x, y)     x > y ? x : y
 
 #define COLMAJ_IND(b, c_len, c, r) \
-b[c+r*c_len]
+    b[c+r*c_len]
 
 typedef struct entry_stat {
     char        * f_name;
@@ -54,17 +58,21 @@ char *my_name;
 char *cwd = NULL;
 unsigned int flags;
 
-static     void do_ls(char *dir);
-static     void print_usage(char *argv[]);
-static     void ls_print(entry_stat **entries, size_t dir_count);
+static     void do_ls(char *dir, char *orig_dir);
+static     void print_usage();
+static     void ls_print(entry_stat **entries, size_t file_count);
 static      int get_terminal_width();
-static     void copy_entry(entry_stat **entries, struct dirent *direntp, size_t dir_count);
-static     void free_entry(entry_stat **entries, size_t st_allocated, size_t dir_count);
+static     void copy_entry(entry_stat **entries, struct dirent *direntp, size_t file_count);
+static     void free_entry(entry_stat **entries, size_t file_count);
 static col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf);
+static     void show_file_info(entry_stat *entry);
 
 // used for qsort
 static      int dname_cmp(const void *, const void *);
 static      int namlen_cmp(const void *p1, const void *p2);
+static     char *mode_to_string(int mode, char str[]);
+static     char *uid_to_name(uid_t uid);
+static     char *gid_to_name(gid_t gid);
 
 int main(int argc, char *argv[])
 {
@@ -96,6 +104,9 @@ int main(int argc, char *argv[])
             case 'c':
                 flags |= IGCASE_OPT;
                 break;
+            case 'h':
+                print_usage();
+                exit(SUCCESS_VAL);
             default:
                 print_usage(argv);
                 exit(FAILURE_VAL);
@@ -104,33 +115,27 @@ int main(int argc, char *argv[])
 
     if (optind == argc) {
         if (cwd)
-            do_ls(cwd);
+            do_ls(cwd, cwd);
         else
-            do_ls(".");
+            do_ls(".", cwd);
     } else {
         for (i = optind; i < argc; ++i)
-            do_ls(argv[i]);
+            do_ls(argv[i], cwd);
     }
     if (cwd)
         free(cwd);
     return 0;
 }
 
-void print_usage(char *argv[]) {
-    fprintf(stderr, "Usage: %s [-l] [-v] [-r]\n",
-            argv[0]);
-}
-
-void do_ls(char *dirname) {
+void do_ls(char *dirname, char *orig_dir) {
     DIR *dir_ptr;
     struct dirent *direntp;
     entry_stat **entries;
+    char **dirs = NULL;
     size_t i;
-    size_t dir_count, st_allocated;
+    size_t dir_count, file_count, st_allocated;
 
-    // chdir to destination directory
-    chdir(dirname);
-
+    file_count = 0;
     dir_count = 0;
     st_allocated = 20;
     entries = (entry_stat**) malloc(sizeof(entry_stat*) * st_allocated);
@@ -138,12 +143,15 @@ void do_ls(char *dirname) {
     if ((dir_ptr = opendir(dirname)) == NULL) {
         fprintf(stderr, "%s: cannot open %s\n", my_name, dirname);
     } else {
+        // chdir to destination directory
+        chdir(dirname);
+
         while ( (direntp = readdir(dir_ptr)) != NULL ) {
             if (flags & ALL_OPT && direntp->d_name[0] == '.')
-                copy_entry(entries, direntp, dir_count++);
+                copy_entry(entries, direntp, file_count++);
             else if (direntp->d_name[0] != '.')
-                copy_entry(entries, direntp, dir_count++);
-            if (st_allocated == dir_count) {
+                copy_entry(entries, direntp, file_count++);
+            if (st_allocated == file_count) {
                 st_allocated += 20;
                 entries = (entry_stat**) realloc(entries,
                                                  sizeof(entry_stat*) * st_allocated);
@@ -152,37 +160,68 @@ void do_ls(char *dirname) {
 
         if (flags & VERBOSE_OPT) {
             printf("Verbose info\n");
-            printf("dir count: %zu, entries allocated: %zu\n", dir_count, st_allocated);
-            for (i = 0; i < dir_count; ++i)
+            printf("dir count: %zu, entries allocated: %zu\n", file_count, st_allocated);
+            for (i = 0; i < file_count; ++i)
                 printf("%s\n", entries[i]->f_name);
             printf("Verbose info end.\n\n");
         }
-        qsort(entries, dir_count, sizeof(char*), dname_cmp);
+
+        // sort by dirnames in alphabetical order
+        qsort(entries, file_count, sizeof(entry_stat*), dname_cmp);
+
         closedir(dir_ptr);
 
         if (flags & MULTI_DIR_OPT)
-            printf("%s:\n", dirname);
-        ls_print(entries, dir_count);
+            printf("\n%s:\n", dirname);
+        ls_print(entries, file_count);
 
-        free_entry(entries, st_allocated, dir_count);
+        if (flags & RECURSIVE_OPT) {
+            dirs = (char**) malloc(sizeof(char*) * file_count);
+            for (i = 0; i < file_count; ++i) {
+                if (S_ISDIR(entries[i]->f_stat.st_mode)) {
+                    dirs[dir_count++] = strndup(entries[i]->f_name, NAME_MAX);
+                }
+            }
+        }
+        free_entry(entries, file_count);
+        entries = NULL;
+        for (i = 0; i < dir_count; ++i) {
+            do_ls(dirs[i], dirname);
+            /* free(dirs[i]); */
+        }
+        for (i = 0; i < dir_count; ++i)
+            free(dirs[i]);
+        if (dirs)
+            free(dirs);
+
     }
 
+    if (entries)
+        free(entries);
     // chdir back to original directory.
-    if (cwd != NULL)
-        chdir(cwd);
+    if (orig_dir != NULL)
+        chdir(orig_dir);
 }
 
-void ls_print(entry_stat **entries, size_t dir_count) {
-    int i;
+void ls_print(entry_stat **entries, size_t file_count) {
+    int i, t;
     col_info colinfo;
     char **pstr;
 
-    if (! (flags & LIST_OPT)) {
-        calc_col_info(entries, dir_count, &colinfo);
+    if (flags & LIST_OPT) {
+        printf("File count: %zu\n", file_count);
+        if (flags & REVERSE_OPT) {
+            for (i = (int)file_count - 1; i >= 0; --i)
+                show_file_info(entries[i]);
+        } else
+            for (i = 0; i < (int)file_count; ++i)
+                show_file_info(entries[i]);
+    } else {
+        calc_col_info(entries, file_count, &colinfo);
         pstr = (char**) malloc(sizeof(char*) * colinfo.col_count);
         for (i = 0; i < (int)colinfo.col_count; ++i) {
             pstr[i] = (char*) malloc(sizeof(char) * NAME_MAX);
-            sprintf(pstr[i], "%%%zus", colinfo.col_len[i]);
+            sprintf(pstr[i], "%%-%zus", colinfo.col_len[i]);
         }
 
         if (flags & VERBOSE_OPT)
@@ -190,47 +229,60 @@ void ls_print(entry_stat **entries, size_t dir_count) {
                 printf("%s\n", pstr[i]);
 
         if (flags & REVERSE_OPT) {
-            for (i = (int)dir_count - 1; i >= 0; --i)
+            for (t = 0, i = (int)file_count - 1; i >= 0; --i) {
                 printf(pstr[i % colinfo.col_count], entries[i]->f_name);
+                if (++t == (int)colinfo.col_count) {
+                    t = 0;
+                    putchar('\n');
+                }
+            }
         } else {
-            for (i = 0; i < (int)dir_count; ++i)
+            for (t = 0, i = 0; i < (int)file_count; ++i) {
                 printf(pstr[i % colinfo.col_count], entries[i]->f_name);
+                if (++t == (int)colinfo.col_count) {
+                    t = 0;
+                    putchar('\n');
+                }
+            }
         }
 
+        if (file_count % colinfo.col_count)
+            putchar('\n');
+
+        free(colinfo.col_len);
+        for (i = 0; i < (int)colinfo.col_count; ++i)
+            free(pstr[i]);
+        if (pstr)
+            free(pstr);
     }
-
-    if (flags & REVERSE_OPT) {
-        for (i = (int)dir_count - 1; i >= 0; --i)
-            printf("%s\n", entries[i]->f_name);
-    } else
-        for (i = 0; i < (int)dir_count; ++i)
-            printf("%s\n", entries[i]->f_name);
 }
 
-void copy_entry(entry_stat **entries, struct dirent *direntp, size_t dir_count) {
+void copy_entry(entry_stat **entries, struct dirent *direntp, size_t file_count) {
     // allocate and clear memory
-    entries[dir_count] = (entry_stat*) malloc(sizeof(entry_stat));
-    memset(entries[dir_count], 0, sizeof(entry_stat));
+    entries[file_count] = (entry_stat*) malloc(sizeof(entry_stat));
+    memset(entries[file_count], 0, sizeof(entry_stat));
     // set data in struct
-    entries[dir_count]->f_name = strndup(direntp->d_name, NAME_MAX);
-    entries[dir_count]->name_len = direntp->d_namlen;
-    stat(direntp->d_name, &entries[dir_count]->f_stat);
+    entries[file_count]->f_name = strndup(direntp->d_name, NAME_MAX);
+    entries[file_count]->name_len = strlen(direntp->d_name);
+    stat(direntp->d_name, &entries[file_count]->f_stat);
 }
 
-void free_entry(entry_stat **entries, size_t st_allocated, size_t dir_count) {
+void free_entry(entry_stat **entries, size_t file_count) {
     size_t i;
-    for (i = 0; i < dir_count; ++i)
+    for (i = 0; i < file_count; ++i) {
         free(entries[i]->f_name);
-    for (i = 0; i < st_allocated; ++i)
         free(entries[i]);
+    }
     free(entries);
 }
 
 int dname_cmp(const void *p1, const void *p2) {
+    const entry_stat *a = *(const entry_stat**)p1;
+    const entry_stat *b = *(const entry_stat**)p2;
     if (flags & IGCASE_OPT)
-        return strcasecmp(*(const char**)p1, *(const char**)p2);
+        return strcmp(a->f_name, b->f_name);
     else
-        return strcmp(*(const char**)p1, *(const char**)p2);
+        return strcasecmp(a->f_name, b->f_name);
 }
 
 int namlen_cmp(const void *p1, const void *p2) {
@@ -238,7 +290,7 @@ int namlen_cmp(const void *p1, const void *p2) {
 }
 
 col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf) {
-    int i, j, width, cal_width, cal_col_count;
+    int i, j, rows, width, cal_width, cal_col_count;
     unsigned int *len_info;
 
     len_info = (unsigned int*) malloc(sizeof(unsigned int) * count);
@@ -264,17 +316,20 @@ col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf) {
 
     // set width of each column
     buf->col_len = (size_t*) malloc(sizeof(size_t) * i);
+
+    rows = ceil((double) count / (double) cal_col_count);
     for (i = 0; i < cal_col_count; ++i) {
-        int rows = ceil((double) count / (double) cal_col_count);
         unsigned int max_width = 0;
         for (j = 0; j < rows; ++j) {
-            if (entries[j*cal_col_count+i]->name_len + 2 > max_width)
+            if (j*cal_col_count+i < (int)count
+                    && entries[j*cal_col_count+i]->name_len + 2 > max_width)
                 max_width = COLMAJ_IND(entries, cal_col_count, i, j)->name_len + 2;
         }
         buf->col_len[i] = max_width;
     }
 
     buf->col_count = cal_col_count;
+    free(len_info);
 
     return buf;
 }
@@ -286,4 +341,72 @@ int get_terminal_width(void) {
         return 80;
     else
         return w.ws_col;
+}
+
+void show_file_info(entry_stat *entry) {
+    char modestr[11];
+
+    mode_to_string(entry->f_stat.st_mode, modestr);
+
+    printf("%s", modestr);
+    printf("%4d ", (int) entry->f_stat.st_nlink);
+    printf("%-8s ", uid_to_name(entry->f_stat.st_uid));
+    printf("%-8s ", gid_to_name(entry->f_stat.st_gid));
+    printf("%8ld ", (long)entry->f_stat.st_size);
+    printf("%.12s ", 4+ctime(&entry->f_stat.st_mtime));
+    printf("%s\n", entry->f_name);
+}
+
+char *mode_to_string(int mode, char str[]) {
+    strcpy(str, "----------");
+
+    // dir? char dev? blk dev?
+    if (S_ISDIR(mode)) str[0] = 'd';
+    if (S_ISCHR(mode)) str[0] = 'c';
+    if (S_ISBLK(mode)) str[0] = 'b';
+
+    if (mode & S_IRUSR) str[1] = 'r';
+    if (mode & S_IWUSR) str[2] = 'w';
+    if (mode & S_IXUSR) str[3] = 'x';
+
+    if (mode & S_IRGRP) str[4] = 'r';
+    if (mode & S_IWGRP) str[5] = 'w';
+    if (mode & S_IXGRP) str[6] = 'x';
+
+    if (mode & S_IROTH) str[7] = 'r';
+    if (mode & S_IWOTH) str[8] = 'w';
+    if (mode & S_IXOTH) str[9] = 'x';
+
+    return str;
+}
+
+char *uid_to_name(uid_t uid) {
+    struct passwd *pwp;
+    static char buf[20];
+    if ( (pwp = getpwuid(uid)) == NULL ) {
+        sprintf(buf, "%d", uid);
+        return buf;
+    } else
+        return pwp->pw_name;
+}
+char *gid_to_name(gid_t gid) {
+    struct group *grpp;
+    static char buf[20];
+    if ( (grpp = getgrgid(gid)) == NULL ) {
+        sprintf(buf, "%d", gid);
+        return buf;
+    } else
+        return grpp->gr_name;
+}
+
+void print_usage() {
+    fprintf(stderr, "Usage: %s [-%s]\n\
+    [-l]\t\tDisplay long info.\n\
+    [-a]\t\tDisplay all files.\n\
+    [-v]\t\tVerbose mode.\n\
+    [-r]\t\tReverse sort.\n\
+    [-c]\t\tCase SeNsiTivE sort.\n\
+    [-R]\t\tRecursive list.\n\
+    [-h]\t\tThis help message.\n",
+            my_name, OPT_STRING);   // lavrchR
 }
