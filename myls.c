@@ -22,6 +22,8 @@
 #define NAME_MAX 256
 #endif
 
+#define LEN_MAX  1000
+
 #define OPT_STRING "lavrchR"
 
 /***************
@@ -58,7 +60,7 @@ char *my_name;
 char *cwd = NULL;
 unsigned int flags;
 
-static     void do_ls(char *dir, char *orig_dir);
+static     void do_ls(char *dir);
 static     void print_usage();
 static     void ls_print(entry_stat **entries, size_t file_count);
 static      int get_terminal_width();
@@ -80,7 +82,7 @@ int main(int argc, char *argv[])
     int i;
 
     flags = 0;
-    cwd = getcwd(NULL, 5000);
+    cwd = getcwd(NULL, LEN_MAX);
     my_name = argv[0];
 
     while ((opt = getopt(argc, argv, OPT_STRING)) != -1) {
@@ -115,30 +117,35 @@ int main(int argc, char *argv[])
 
     if (optind == argc) {
         if (cwd)
-            do_ls(cwd, cwd);
+            do_ls(cwd);
         else
-            do_ls(".", cwd);
+            do_ls(".");
     } else {
         for (i = optind; i < argc; ++i)
-            do_ls(argv[i], cwd);
+            do_ls(argv[i]);
     }
     if (cwd)
         free(cwd);
     return 0;
 }
 
-void do_ls(char *dirname, char *orig_dir) {
+void do_ls(char *dirname) {
     DIR *dir_ptr;
     struct dirent *direntp;
     entry_stat **entries;
     char **dirs = NULL;
     size_t i;
     size_t dir_count, file_count, st_allocated;
+    char orig_dir[LEN_MAX];
 
     file_count = 0;
     dir_count = 0;
     st_allocated = 20;
     entries = (entry_stat**) malloc(sizeof(entry_stat*) * st_allocated);
+    getcwd(orig_dir, LEN_MAX);
+
+    if (flags & VERBOSE_OPT)
+        printf("Original dir:\t%s\n", orig_dir);
 
     if ((dir_ptr = opendir(dirname)) == NULL) {
         fprintf(stderr, "%s: cannot open %s\n", my_name, dirname);
@@ -179,21 +186,26 @@ void do_ls(char *dirname, char *orig_dir) {
             dirs = (char**) malloc(sizeof(char*) * file_count);
             for (i = 0; i < file_count; ++i) {
                 if (S_ISDIR(entries[i]->f_stat.st_mode)) {
-                    dirs[dir_count] = (char*) malloc(sizeof(char) * NAME_MAX);
-                    strncpy(dirs[dir_count++], entries[i]->f_name, NAME_MAX);
+                    dirs[dir_count] = (char*) malloc(sizeof(char) * LEN_MAX);
+                    strncpy(dirs[dir_count], dirname, LEN_MAX);
+                    strncat(dirs[dir_count], "/", LEN_MAX);
+                    strncat(dirs[dir_count], entries[i]->f_name, LEN_MAX);
+                    dir_count++;
                 }
             }
         }
         free_entry(entries, file_count);
         entries = NULL;
+        // chdir back to original directory.
+        if (orig_dir != NULL)
+            chdir(orig_dir);
         if (flags & VERBOSE_OPT) {
             printf("Dirs to be recursively lsed:\n");
             for (i = 0; i < dir_count; ++i)
                 printf("%s\n", dirs[i]);
         }
         for (i = 0; i < dir_count; ++i) {
-            do_ls(dirs[i], dirname);
-            /* free(dirs[i]); */
+            do_ls(dirs[i]);
         }
         for (i = 0; i < dir_count; ++i)
             free(dirs[i]);
@@ -204,15 +216,15 @@ void do_ls(char *dirname, char *orig_dir) {
 
     if (entries)
         free(entries);
-    // chdir back to original directory.
-    if (orig_dir != NULL)
-        chdir(orig_dir);
 }
 
 void ls_print(entry_stat **entries, size_t file_count) {
     int i, t;
     col_info colinfo;
     char **pstr;
+
+    if (file_count == 0)
+        return;
 
     if (flags & LIST_OPT) {
         printf("File count: %zu\n", file_count);
@@ -318,7 +330,8 @@ col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf) {
     for (i = 0; i < (int)count && cal_width < width; ++i)
         cal_width += len_info[i] + 2;
 
-    cal_col_count = i; // set cal_col_count to max possible column count
+    // set cal_col_count to max possible column count
+    cal_col_count = i > 1 ? i - 1 : 1;
 
     // set width of each column
     buf->col_len = (size_t*) malloc(sizeof(size_t) * i);
