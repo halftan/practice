@@ -3,3 +3,4 @@
 *.pyc
 !Makefile
 *.o
+*.tar
