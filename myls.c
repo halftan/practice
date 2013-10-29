@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
     int i;
 
     flags = 0;
-    cwd = getcwd(NULL, 500);
+    cwd = getcwd(NULL, 5000);
     my_name = argv[0];
 
     while ((opt = getopt(argc, argv, OPT_STRING)) != -1) {
@@ -179,12 +179,18 @@ void do_ls(char *dirname, char *orig_dir) {
             dirs = (char**) malloc(sizeof(char*) * file_count);
             for (i = 0; i < file_count; ++i) {
                 if (S_ISDIR(entries[i]->f_stat.st_mode)) {
-                    dirs[dir_count++] = strndup(entries[i]->f_name, NAME_MAX);
+                    dirs[dir_count] = (char*) malloc(sizeof(char) * NAME_MAX);
+                    strncpy(dirs[dir_count++], entries[i]->f_name, NAME_MAX);
                 }
             }
         }
         free_entry(entries, file_count);
         entries = NULL;
+        if (flags & VERBOSE_OPT) {
+            printf("Dirs to be recursively lsed:\n");
+            for (i = 0; i < dir_count; ++i)
+                printf("%s\n", dirs[i]);
+        }
         for (i = 0; i < dir_count; ++i) {
             do_ls(dirs[i], dirname);
             /* free(dirs[i]); */
