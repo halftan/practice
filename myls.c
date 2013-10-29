@@ -17,6 +17,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <time.h>
+#include <ctype.h>
 
 #ifndef NAME_MAX
 #define NAME_MAX 256
@@ -49,6 +50,7 @@ typedef struct entry_stat {
     char        * f_name;
     struct   stat f_stat;
     unsigned  int name_len;
+    int           extra_space;
 } entry_stat;
 
 typedef struct col_info {
@@ -68,6 +70,8 @@ static     void copy_entry(entry_stat **entries, struct dirent *direntp, size_t 
 static     void free_entry(entry_stat **entries, size_t file_count);
 static col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf);
 static     void show_file_info(entry_stat *entry);
+static     char *mstrdup(const char*, size_t size);
+static     void print_space(int count);
 
 // used for qsort
 static      int dname_cmp(const void *, const void *);
@@ -185,7 +189,9 @@ void do_ls(char *dirname) {
         if (flags & RECURSIVE_OPT) {
             dirs = (char**) malloc(sizeof(char*) * file_count);
             for (i = 0; i < file_count; ++i) {
-                if (S_ISDIR(entries[i]->f_stat.st_mode)) {
+                if (    strcmp(entries[i]->f_name, ".") != 0
+                        && strcmp(entries[i]->f_name, "..") != 0
+                        && S_ISDIR(entries[i]->f_stat.st_mode)) {
                     dirs[dir_count] = (char*) malloc(sizeof(char) * LEN_MAX);
                     strncpy(dirs[dir_count], dirname, LEN_MAX);
                     strncat(dirs[dir_count], "/", LEN_MAX);
@@ -249,6 +255,7 @@ void ls_print(entry_stat **entries, size_t file_count) {
         if (flags & REVERSE_OPT) {
             for (t = 0, i = (int)file_count - 1; i >= 0; --i) {
                 printf(pstr[i % colinfo.col_count], entries[i]->f_name);
+                print_space(entries[i]->extra_space);
                 if (++t == (int)colinfo.col_count) {
                     t = 0;
                     putchar('\n');
@@ -257,6 +264,7 @@ void ls_print(entry_stat **entries, size_t file_count) {
         } else {
             for (t = 0, i = 0; i < (int)file_count; ++i) {
                 printf(pstr[i % colinfo.col_count], entries[i]->f_name);
+                print_space(entries[i]->extra_space);
                 if (++t == (int)colinfo.col_count) {
                     t = 0;
                     putchar('\n');
@@ -280,7 +288,7 @@ void copy_entry(entry_stat **entries, struct dirent *direntp, size_t file_count)
     entries[file_count] = (entry_stat*) malloc(sizeof(entry_stat));
     memset(entries[file_count], 0, sizeof(entry_stat));
     // set data in struct
-    entries[file_count]->f_name = strndup(direntp->d_name, NAME_MAX);
+    entries[file_count]->f_name = mstrdup(direntp->d_name, NAME_MAX);
     entries[file_count]->name_len = strlen(direntp->d_name);
     stat(direntp->d_name, &entries[file_count]->f_stat);
 }
@@ -316,8 +324,19 @@ col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf) {
     cal_width = 0;
     width = get_terminal_width();
 
-    for (i = 0; i < (int)count; ++i)
+    // workaround to determine whether contains wide-chars
+    // using mblen
+    for (i = 0; i < (int)count; ++i) {
+        int nonascii_count = 0;
+        if (mblen(entries[i]->f_name, entries[i]->name_len) == -1) {
+            nonascii_count = entries[i]->name_len / 3;
+            if (flags & VERBOSE_OPT)
+                printf("Appending spaces:%d for:%s\n", nonascii_count, entries[i]->f_name);
+        }
+        entries[i]->extra_space = nonascii_count;
+
         len_info[i] = entries[i]->name_len;
+    }
 
     qsort(len_info, count, sizeof(unsigned int), namlen_cmp);
 
@@ -331,7 +350,13 @@ col_info *calc_col_info(entry_stat **entries, size_t count, col_info *buf) {
         cal_width += len_info[i] + 2;
 
     // set cal_col_count to max possible column count
-    cal_col_count = i > 1 ? i - 1 : 1;
+    if (cal_width > width) {
+        i--;
+        cal_width -= len_info[i] - 2;
+        cal_col_count = i;
+    } else {
+        cal_col_count = i;
+    }
 
     // set width of each column
     buf->col_len = (size_t*) malloc(sizeof(size_t) * i);
@@ -416,6 +441,18 @@ char *gid_to_name(gid_t gid) {
         return buf;
     } else
         return grpp->gr_name;
+}
+
+char *mstrdup(const char *b, size_t size) {
+    char *t;
+    t = (char*) malloc(sizeof(char) * size);
+    strncpy(t, b, size);
+    return t;
+}
+
+void print_space(int n) {
+    for(; n > 0; --n)
+        putchar(' ');
 }
 
 void print_usage() {
