@@ -81,7 +81,9 @@ flags = [
 '-isystem',
 '/usr/local/include',
 '-isystem',
-'/usr/include'
+'/usr/include',
+'-isystem',
+'/usr/include/c++/4.8.2'
 ]
 
 # Set this to the absolute path to the folder (NOT the file!) containing the

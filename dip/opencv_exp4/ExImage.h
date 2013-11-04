@@ -2,7 +2,9 @@
 #define EX_IMAGE_H 1
 
 #include <iostream>
+#include <complex>
 #include <string>
+#include <cmath>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -14,6 +16,12 @@ typedef unsigned int uint;
 
 using namespace std;
 
+typedef ExImage::EImageError ImgErr;
+typedef cv::Mat_<complex<double>> cmat;
+typedef complex<double> cmat_elem;
+
+void clearImage(cv::Mat img, int h, int w, uchar t=255);
+
 class ExImage
 {
 public:
@@ -21,9 +29,20 @@ public:
     string getBasename() const;
     void showImage();
     void closeImage();
+
+    /*
+     * Histogram
+     */
     ExImage getHistogram();
     ExImage equalizeHist();
     ExImage histogramMatching(ExImage matching);
+
+    /*
+     * Fourier Transformation
+     */
+    void calcFourier();
+    ExImage getFourier();
+    ExImage getInverseFourier();
 
     cv::Mat getMat() const;
     ExImage(const string path);
@@ -48,11 +67,8 @@ private:
     string full_path;
     string win_name;
     cv::Mat img_mat;
+    cmat fourier_mat;
     string gen_random();
 };
-
-typedef ExImage::EImageError ImgErr;
-
-void clearImage(cv::Mat img, int h, int w, uchar t=255);
 
 #endif
