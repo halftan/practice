@@ -16,11 +16,11 @@ typedef unsigned int uint;
 
 using namespace std;
 
-typedef ExImage::EImageError ImgErr;
-typedef cv::Mat_<complex<double>> cmat;
-typedef complex<double> cmat_elem;
+typedef complex<double> cdouble;
 
 void clearImage(cv::Mat img, int h, int w, uchar t=255);
+
+const double PI = 3.1415926535897932384626433;
 
 class ExImage
 {
@@ -41,8 +41,8 @@ public:
      * Fourier Transformation
      */
     void calcFourier();
-    ExImage getFourier();
-    ExImage getInverseFourier();
+    ExImage convertToFourierImg();
+    ExImage convertToOriginalImg();
 
     cv::Mat getMat() const;
     ExImage(const string path);
@@ -61,14 +61,16 @@ public:
         string msg;
         unsigned int errcode;
     };
-    ~ExImage(){};
+    ~ExImage();
 
 private:
     string full_path;
     string win_name;
     cv::Mat img_mat;
-    cmat fourier_mat;
+    cdouble *fourier_mat;
     string gen_random();
 };
+
+typedef ExImage::EImageError ImgErr;
 
 #endif

@@ -5,9 +5,10 @@
 */
 ExImage::ExImage(const string path)
 {
-    this->full_path = path;
-    this->win_name = getBasename();
-    this->img_mat = cv::imread(path, 0);
+    this->full_path   = path;
+    this->win_name    = getBasename();
+    this->img_mat     = cv::imread(path, 0);
+    this->fourier_mat = NULL;
     //cv::cvtColor(this->img_mat, this->img_mat, CV_BGR2GRAY);
     if (img_mat.empty())
         throw EImageError(
@@ -15,11 +16,19 @@ ExImage::ExImage(const string path)
         );
 }
 
+/*
+ * destructor.
+ */
+ExImage::~ExImage()
+{
+    delete this->fourier_mat;
+}
+
 ExImage::ExImage(const cv::Mat& src)
-    : full_path(gen_random()), win_name(gen_random()), img_mat(src) {}
+    : full_path(gen_random()), win_name(gen_random()), img_mat(src) { this->fourier_mat = NULL; }
 
 ExImage::ExImage(const cv::Mat& src, string short_name)
-    : full_path(gen_random()), win_name(short_name), img_mat(src) {}
+    : full_path(gen_random()), win_name(short_name), img_mat(src) { this->fourier_mat = NULL; }
 
 /*
     copy/assignment constructor
@@ -27,15 +36,17 @@ ExImage::ExImage(const cv::Mat& src, string short_name)
 ExImage::ExImage(const ExImage& src)
     : img_mat(src.getMat())
 {
-    this->full_path = src.getFullPath();
-    this->win_name = src.getBasename();
+    this->full_path   = src.getFullPath();
+    this->win_name    = src.getBasename();
+    this->fourier_mat = NULL;
 }
 
 ExImage ExImage::operator=(const ExImage& src)
 {
-    this->full_path = src.getFullPath();
-    this->win_name = src.getBasename();
-    this->img_mat = src.getMat();
+    this->full_path   = src.getFullPath();
+    this->win_name    = src.getBasename();
+    this->img_mat     = src.getMat();
+    this->fourier_mat = NULL;
     return *this;
 }
 

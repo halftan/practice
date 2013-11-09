@@ -13,53 +13,34 @@ int main(int argc, char **argv)
 {
     string path;
     ExImage *image = NULL;
-    string msg = "Please input the image name(Default to \"../lena.jpg\"):";
-    string msg_match = "Please input the matching image name(Default to \"../matching.jpg\"):";
+    string msg = "Please input the image name";
 
     path = getImagePath(msg, "../lena.jpg",true);
     while (path.length() != 0 && !(
         path.length() == 1 && path[0] == 'q')) {
         try {
             image = new ExImage(path);
-            ExImage histo = image->getHistogram();
 
-            cout << "Original image and histogram" << endl;
+            cout << "Original image:" << endl;
+
             image->showImage();
-            histo.showImage();
-
             cv::waitKey(0);
-
             image->closeImage();
-            histo.closeImage();
 
-            ExImage eqalized = image->equalizeHist();
-            histo = eqalized.getHistogram();
+            cout << "Fourier Transformed Image:" << endl;
+            image->calcFourier();
+            image->convertToFourierImg();
 
-            cout << "HistoEqualized image and histogram" << endl;
-            eqalized.showImage();
-            histo.showImage();
-
+            image->showImage();
             cv::waitKey(0);
+            image->closeImage();
 
-            eqalized.closeImage();
-            histo.closeImage();
+            cout << "Inverse Fourier Transformed Image:" << endl;
+            image->convertToOriginalImg();
 
-            ExImage match(getImagePath(msg_match, "../matching.jpg"));
-            ExImage matched = image->histogramMatching(match);
-            ExImage match_histo = match.getHistogram();
-            histo = matched.getHistogram();
-
-            cout << "HistoMatched image and histogram" << endl;
-
-            match_histo.showImage();
-            matched.showImage();
-            histo.showImage();
-
+            image->showImage();
             cv::waitKey(0);
-
-            match_histo.closeImage();
-            matched.closeImage();
-            histo.closeImage();
+            image->closeImage();
 
             delete image;
             image = NULL;
@@ -78,7 +59,7 @@ int main(int argc, char **argv)
 string getImagePath(const string &msg, const string &def, bool flag)
 {
     string name;
-    cout << msg << endl;
+    cout << msg << "(Default to \"" << def << "\"):" << endl;
     if (flag)
         cout << "Type 'q' to exit:" << endl;
     getline(cin, name);
