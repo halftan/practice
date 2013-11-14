@@ -38,7 +38,6 @@ flags = [
 '-Wall',
 '-Wextra',
 '-Werror',
-'-Wc++98-compat',
 '-Wno-long-long',
 '-Wno-variadic-macros',
 '-fexceptions',
@@ -71,6 +70,8 @@ flags = [
 '.',
 '-I',
 './ClangCompleter',
+'-I',
+'./include',
 '-isystem',
 './tests/gmock/gtest',
 '-isystem',
@@ -79,8 +80,11 @@ flags = [
 './tests/gmock',
 '-isystem',
 './tests/gmock/include',
+'-isystem',
 '/usr/local/include',
+'-isystem',
 '/usr/include/',
+'-isystem',
 '/usr/include/c++/4.8.2'
 ]
 
