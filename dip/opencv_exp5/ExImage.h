@@ -65,8 +65,7 @@ private:
     string full_path;
     string win_name;
     cv::Mat img_mat;
-    double *real_num;
-	double *imag_num;
+    cv::Mat fourierI;
     string gen_random();
 };
 

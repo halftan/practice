@@ -10,12 +10,13 @@ void ExImage::calcFourier()
     area = img_mat.size().area();
     k = sqrt(area);
 
-    this->fourier_mat = new cdouble[(long)area];
+    this->real_num = new double[h*w];
+	this->imag_num = new double[h*w];
 
     for (int v = 0; v < h; ++v) {
+        cout << "V: " << v << endl;
         for (int u = 0; u < w; ++u) {
             double t_real = 0, t_imag = 0;
-            cout << "U: " << u << "\tV: " << v << endl;
             for (int y = 0; y < h; ++y) {
                 for (int x = 0; x < w; ++x) {
                     double angle = -(double(u*x)/w + double(v*y)/h) * 2 * PI;
@@ -31,7 +32,8 @@ void ExImage::calcFourier()
             t_real /= k;
             t_imag /= k;
 
-            this->fourier_mat[v*w+u] = cdouble(t_real, t_imag);
+			this->real_num[v*w + u] = t_real;
+			this->imag_num[v*w + u] = t_imag;
         }
     }
 }
@@ -42,7 +44,7 @@ ExImage ExImage::convertToFourierImg()
     int x, y, h, w;
     double temp, min, max, *_img, s, k;
 
-    if (this->fourier_mat == NULL)
+    if (this->imag_num == NULL || this->real_num == NULL)
         this->calcFourier();
 
     h = img_mat.size().height;
@@ -51,10 +53,10 @@ ExImage ExImage::convertToFourierImg()
     this->img_mat = cv::Mat::zeros(h, w, CV_8UC1);
 
     _img = new double[w*h];
-    max = min = C * log(std::norm(this->fourier_mat[0]) + 1);
+    max = min = C * log(std::norm(complex<double>(this->real_num[0], this->imag_num[0])) + 1);
     for (y = 0; y < h; ++y) {
         for (x = 0; x < w; ++x) {
-            temp = std::norm(this->fourier_mat[y*w + x]);
+            temp = std::norm(complex<double>(this->real_num[y*w + x], this->imag_num[y*w + x]));
             _img[y*w + x] = C * log(1 + temp);
             if (_img[y*w + x] > max) {
                 max = _img[y*w + x];
@@ -84,7 +86,7 @@ ExImage ExImage::convertToFourierImg()
 
 ExImage ExImage::convertToOriginalImg()
 {
-    if (this->fourier_mat == NULL)
+    if (this->imag_num == NULL || this->real_num == NULL)
         return *this;
 
     int w, h;
@@ -105,10 +107,10 @@ ExImage ExImage::convertToOriginalImg()
                 for (int u = 0; u < w; ++u) {
                     double angle = (double(u*x)/w + double(v*y)/h) * 2 * PI;
 
-                    rn += this->fourier_mat[v*w + u].real() * cos(angle) -
-                        this->fourier_mat[v*w + u].imag() * sin(angle);
-                    vn += this->fourier_mat[v*w + u].real() * sin(angle) -
-                        this->fourier_mat[v*w + u].imag() * cos(angle);
+                    rn += this->real_num[v*w + u] * cos(angle) -
+                        this->imag_num[v*w + u]* sin(angle);
+                    vn += this->real_num[v*w + u] * sin(angle) -
+                        this->imag_num[v*w + u] * cos(angle);
                 }
             }
 
@@ -121,13 +123,14 @@ ExImage ExImage::convertToOriginalImg()
             } else {
                 s = 1;
             }
-            rn = 2 * rn;
+            rn = s * rn;
 
             int result = int(rn + 0.5);
             if (result < 0) result = 0;
             if (result > 255) result = 255;
             this->img_mat.at<uchar>(y,x) = result;
         }
+        cout << "V: " << y << endl;
     }
 
     return *this;
