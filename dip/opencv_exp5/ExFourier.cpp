@@ -12,7 +12,7 @@ void ExImage::calcFourier()
 
 ExImage ExImage::convertToFourierImg()
 {
-	Mat channels[] = {Mat_<float>(img_mat), Mat::zeros(img_mat.size(), CV_32F)};
+    Mat channels[] = {Mat_<float>(img_mat), Mat::zeros(img_mat.size(), CV_32F)};
 
     split(fourierI, channels);
     magnitude(channels[0], channels[1], channels[0]);
@@ -21,8 +21,8 @@ ExImage ExImage::convertToFourierImg()
     magI += Scalar::all(1);                    // switch to logarithmic scale
     log(magI, magI);
 
-	// crop the spectrum, if it has an odd number of rows or columns
-	magI = magI(Rect(0, 0, magI.cols & -2, magI.rows & -2));
+    // crop the spectrum, if it has an odd number of rows or columns
+    magI = magI(Rect(0, 0, magI.cols & -2, magI.rows & -2));
 
     // rearrange the quadrants of Fourier image  so that the origin is at the image center
     int cx = magI.cols/2;
@@ -49,7 +49,7 @@ ExImage ExImage::convertToFourierImg()
 
 ExImage ExImage::convertToOriginalImg()
 {
-	dft(fourierI, img_mat, DFT_INVERSE|DFT_REAL_OUTPUT);
-	normalize(img_mat, img_mat, 0, 1, CV_MINMAX);
+    dft(fourierI, img_mat, DFT_INVERSE|DFT_REAL_OUTPUT);
+    normalize(img_mat, img_mat, 0, 1, CV_MINMAX);
     return *this;
 }

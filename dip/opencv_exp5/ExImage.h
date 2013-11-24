@@ -41,13 +41,13 @@ public:
     ExImage convertToFourierImg();
     ExImage convertToOriginalImg();
 
-	/*
-	 * Image process
-	 */
-	ExImage sharp();
-	ExImage smooth();
-	ExImage lowPass();
-	ExImage highPass();
+    /*
+     * Image process
+     */
+    ExImage sharp();
+    ExImage smooth();
+    ExImage lowPass();
+    ExImage highPass();
 
     cv::Mat getMat() const;
     ExImage(const string path);
