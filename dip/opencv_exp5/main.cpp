@@ -12,46 +12,77 @@ using namespace std;
 int main(int argc, char **argv)
 {
     string path;
-    ExImage *image = NULL;
     string msg = "Please input the image name";
-
-    path = getImagePath(msg, "../test.jpg",true);
-    while (path.length() != 0 && !(
-        path.length() == 1 && path[0] == 'q')) {
+    
+    for (path = getImagePath(msg, "../lena.jpg",true);
+		path.length() != 0 && !(path.length() == 1 && path[0] == 'q');
+		path = getImagePath(msg, "../lena.jpg",true)) {
         try {
-            image = new ExImage(path);
+            ExImage image = ExImage(path);
+			ExImage orig = image;
+			ExImage four = orig;
 
             cout << "Original image:" << endl;
 
-            image->showImage();
+            image.showImage();
             cv::waitKey(0);
-            image->closeImage();
+            image.closeImage();
 
-            cout << "Fourier Transformed Image:" << endl;
-            image->calcFourier();
-            image->convertToFourierImg();
+            cout << "Sharpened Image:" << endl;
+			image.sharp();
 
-            image->showImage();
+            image.showImage();
             cv::waitKey(0);
-            image->closeImage();
+            image.closeImage();
 
-            cout << "Inverse Fourier Transformed Image:" << endl;
-            image->convertToOriginalImg();
+            cout << "Smoothed Image:" << endl;
+			image = orig;
+            image.smooth();
 
-            image->showImage();
+            image.showImage();
             cv::waitKey(0);
-            image->closeImage();
+            image.closeImage();
 
-            delete image;
-            image = NULL;
+			cout << "Low Pass:" << endl;
+			orig.calcFourier();
+			image = orig;
+			four.calcFourier();
+			four.lowPass();
+			four.convertToFourierImg();
+
+			image.calcFourier();
+			image.lowPass();
+			image.convertToOriginalImg();
+
+			four.showImage();
+			image.showImage();
+
+			cv::waitKey(0);
+			image.closeImage();
+			four.closeImage();
+
+			cout << "High pass:" << endl;
+			image = orig;
+			four = orig;
+
+			image.calcFourier();
+			image.highPass();
+
+			four.calcFourier();
+			four.highPass();
+			four.convertToFourierImg();
+
+			image.showImage();
+			four.showImage();
+
+			cv::waitKey(0);
+			four.closeImage();
+			image.closeImage();
+
         } catch (ImgErr e) {
             cerr << e.getMessage() << '\n';
         }
-
-        path = getImagePath(msg, "../test.jpg", true);
     }
-    if (image)
-        delete image;
 
     return 0;
 }

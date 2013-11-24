@@ -8,7 +8,6 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 
 #define EIMGREAD 1
 
@@ -41,6 +40,14 @@ public:
     void calcFourier();
     ExImage convertToFourierImg();
     ExImage convertToOriginalImg();
+
+	/*
+	 * Image process
+	 */
+	ExImage sharp();
+	ExImage smooth();
+	ExImage lowPass();
+	ExImage highPass();
 
     cv::Mat getMat() const;
     ExImage(const string path);
