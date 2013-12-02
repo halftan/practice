@@ -99,8 +99,14 @@ int update(void)
 
     update_ball();
     if (start_time - time(NULL) >= 10 * game_speed
-            && REFRESH_DELAY >= 30000)
-        game_speed += 0.5;
+            && REFRESH_DELAY >= 30000) {
+        /* game_speed += 0.5; */
+        dirn_x *= 1.5;
+        dirn_y *= 1.5;
+    }
+
+    usleep(REFRESH_DELAY);
+
     return TRUE;
 }
 
@@ -109,8 +115,6 @@ void draw(void)
     clear();
     draw_plate();
     draw_ball();
-
-    usleep(REFRESH_DELAY);
 
     refresh();
 }
@@ -163,6 +167,8 @@ void post_process(void)
 
 void quithandler(int sig)
 {
+    if (sig == SIGQUIT)
+        return;
     post_process();
     exit(0);
 }
