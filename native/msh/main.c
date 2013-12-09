@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <errno.h>
 #include <unistd.h>
 
 #include "main.h"
+#include "arguments.h"
 
 int main(int argc, char *argv[], char *envp[]) {
     char c = 0;
@@ -12,11 +15,10 @@ int main(int argc, char *argv[], char *envp[]) {
     size_t buf_i;
 
     init_args(&args);
-    cwd = (char *) malloc(sizeof(char) * CWDLEN);
-    getcwd(cwd, CWDLEN);
-    print_prompt();
 
+    init(argc, argv, envp);
     bzero(buf, sizeof(char) * BUFSIZE);
+    print_prompt();
     for (c = getchar(), buf_i = 0;
             c != EOF; c = getchar()) {
         if (c == '\n') {
@@ -24,6 +26,8 @@ int main(int argc, char *argv[], char *envp[]) {
             exec_command(&args, argc, argv, envp);
             clear_arg(&args);
             print_prompt();
+            bzero(buf, sizeof(char) * BUFSIZE);
+            buf_i = 0;
         } else {
             buf[buf_i++] = c;
         }
@@ -51,67 +55,36 @@ void parse_line(char *buf, arguments *arg) {
         add_arg(arg, argbuf);
 }
 
-arguments *init_args(arguments *arg) {
-    int i;
-    arg->argc = 0;
-    arg->_alloc = INIT_ARGC;
-    arg->argv = (char**) malloc(sizeof(char*) * arg->_alloc);
-    for (i = 0; i < arg->_alloc; ++i)
-        arg->argv[i] = NULL;
-    return arg;
-}
-
-arguments *add_arg(arguments *arg, char *str) {
-    if (arg->_alloc <= arg->argc + 1)
-        _arg_alloc(arg);
-    arg->argv[arg->argc++] = strdup(str);
-
-    return arg;
-}
-
-void _arg_alloc(arguments *arg) {
-    int i;
-    arg->_alloc += STEP_ARGC;
-    arg->argv = (char**) realloc(arg->argv, sizeof(char*) * arg->_alloc);
-    for (i = arg->argc; i < arg->_alloc; ++i) {
-        arg->argv[i] = NULL;
-    }
-}
-
-void del_arg(arguments *arg) {
-    int i;
-    for (i = 0; i < arg->_alloc; ++i) {
-        free(arg->argv[i]);
-        arg->argv[i] = NULL;
-    }
-    free(arg->argv);
-    arg->argv = NULL;
-}
-
-void clear_arg(arguments *arg) {
-    int i;
-    for (i = 0; i < arg->argc; ++i) {
-        free(arg->argv[i]);
-        arg->argv[i] = NULL;
-    }
-    arg->argc = 0;
-    printf("Cleared arguments\n");
-}
 
 void print_prompt() {
     printf("[%s]$ ", cwd);
 }
 
 void exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
-    _print_arg(arg);
-    if (arg->argc >= 1 && strcmp("ls", arg->argv[0]) == 0) {
-        execve("/bin/ls", arg->argv, envp);
+    pid_t pid;
+    /* print_arg(arg); */
+    if (arg->argc >= 1) {
+        if ((pid = fork()) < 0) {
+            fprintf(stderr, "Error: fork error.\n");
+        } else if (pid == 0) {
+            if (execvp(arg->argv[0], arg->argv) < 0) {
+                fprintf(stderr, "%s: %s\n", arg->argv[0], strerror(errno));
+                exit(-1);
+            }
+        } else {
+            wait(NULL);
+        }
     }
 }
 
-void _print_arg(arguments *arg) {
-    int i;
-    for (i = 0; i < arg->argc; ++i) {
-        printf("%d: %s\n", i, arg->argv[i]);
-    }
+void init(int argc, char *argv[], char *envp[]) {
+    cwd = (char *) malloc(sizeof(char) * CWDLEN);
+    getcwd(cwd, CWDLEN);
+    signal(SIGINT, sigint_handler);
+}
+
+void sigint_handler(int sig) {
+    putchar('\n');
+    print_prompt();
+    fflush(stdout);
 }

@@ -1,15 +1,19 @@
 NAME = msh
 CC = gcc
-CFLAGS = -g -Wall -c
+CFLAGS = -g -c -I./include -Wall -Wno-unused-function
 LDFLAGS = -o $(NAME)
+DEPS = main.o arguments.o
 
 all : $(NAME)
 
-$(NAME) : main.o
-	$(CC) $(LDFLAGS) main.o
+$(NAME) : $(DEPS)
+	$(CC) $(LDFLAGS) $(DEPS)
 
-main.o : main.c main.h
+main.o : main.c
 	$(CC) $(CFLAGS) main.c
+
+arguments.o : arguments.c
+	$(CC) $(CFLAGS) arguments.c
 
 clean :
 	rm main.o $(NAME)
