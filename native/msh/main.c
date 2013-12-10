@@ -15,15 +15,28 @@ int main(int argc, char *argv[], char *envp[]) {
     char *cmd = NULL;
     char *buf = (char*) malloc(sizeof(char) * BUFSIZE);
     arguments args;
+    int ret;
 
     init(argc, argv, envp);
     init_args(&args);
     sprintf(buf, "[%s]$ ", cwd);
 
     // Use readline
-    while ((cmd = readline(buf)) != NULL) {
+    while (stateno != EXIT_STATE
+            && (cmd = readline(buf)) != NULL) {
         parse_line(cmd, &args);
-        exec_command(&args, argc, argv, envp);
+        ret = exec_command(&args, argc, argv, envp);
+        if (ret != NORMAL) {
+            switch (ret) {
+                case CHECK_STATE:
+                    switch (stateno) {
+                        case EXIT_STATE:
+                            printf("Bye~\n");
+                            break;
+                    }
+                    break;
+            }
+        }
         add_history(cmd); // add to readline history
         clear_arg(&args);
         free(cmd);        // manually free readline returned buffer
@@ -60,7 +73,17 @@ void print_prompt() {
     printf("[%s]$ ", cwd);
 }
 
+int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]) {
+    if (strcmp("exit", arg->argv[0]) == 0) {
+        stateno = EXIT_STATE;
+        return 1;
+    }
+    return 0;
+}
+
 int exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
+    if (shell_builtin(arg, argc, argv, envp))
+        return CHECK_STATE;
     pid_t pid;
     /* print_arg(arg); */
     if (arg->argc >= 1) {
@@ -75,7 +98,7 @@ int exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
             wait(NULL);
         }
     }
-    return 0;
+    return NORMAL;
 }
 
 void init(int argc, char *argv[], char *envp[]) {
