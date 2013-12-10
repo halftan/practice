@@ -16,4 +16,4 @@ arguments.o : arguments.c
 	$(CC) $(CFLAGS) arguments.c
 
 clean :
-	rm main.o $(NAME)
+	rm $(DEPS) $(NAME)
