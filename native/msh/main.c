@@ -5,34 +5,34 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include <readline/readline.h>
+#include <readline/history.h>
+
 #include "main.h"
 #include "arguments.h"
 
 int main(int argc, char *argv[], char *envp[]) {
-    char c = 0;
+    char *cmd = NULL;
     char *buf = (char*) malloc(sizeof(char) * BUFSIZE);
     arguments args;
-    size_t buf_i;
-
-    init_args(&args);
 
     init(argc, argv, envp);
-    bzero(buf, sizeof(char) * BUFSIZE);
-    print_prompt();
-    for (c = getchar(), buf_i = 0;
-            c != EOF; c = getchar()) {
-        if (c == '\n') {
-            parse_line(buf, &args);
-            exec_command(&args, argc, argv, envp);
-            clear_arg(&args);
-            print_prompt();
-            bzero(buf, sizeof(char) * BUFSIZE);
-            buf_i = 0;
-        } else {
-            buf[buf_i++] = c;
-        }
+    init_args(&args);
+    sprintf(buf, "[%s]$ ", cwd);
+
+    // Use readline
+    while ((cmd = readline(buf)) != NULL) {
+        parse_line(cmd, &args);
+        exec_command(&args, argc, argv, envp);
+        add_history(cmd); // add to readline history
+        clear_arg(&args);
+        free(cmd);        // manually free readline returned buffer
+        cmd = NULL;
     }
     del_arg(&args);
+
+    free(cwd);
+    free(buf);
     return 0;
 }
 
@@ -60,7 +60,7 @@ void print_prompt() {
     printf("[%s]$ ", cwd);
 }
 
-void exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
+int exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
     pid_t pid;
     /* print_arg(arg); */
     if (arg->argc >= 1) {
@@ -75,6 +75,7 @@ void exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
             wait(NULL);
         }
     }
+    return 0;
 }
 
 void init(int argc, char *argv[], char *envp[]) {
