@@ -1,7 +1,7 @@
 NAME = msh
 CC = gcc
 CFLAGS = -g -c -I./include -Wall -Wno-unused-function
-LDFLAGS = -o $(NAME)
+LDFLAGS = -o $(NAME) -lreadline
 DEPS = main.o arguments.o
 
 all : $(NAME)
@@ -16,4 +16,4 @@ arguments.o : arguments.c
 	$(CC) $(CFLAGS) arguments.c
 
 clean :
-	rm main.o $(NAME)
+	rm $(DEPS) $(NAME)
