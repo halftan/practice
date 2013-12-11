@@ -9,6 +9,7 @@ char *cwd;
 int stateno;
 
 #define EXIT_STATE 0x00000001
+#define IF_STATE 0x00000002
 
 #define CHECK_STATE 0x0000000F
 #define NORMAL 0
@@ -22,5 +23,6 @@ void parse_line(char*, arguments*);
 void print_prompt(void);
 int exec_command(arguments *arg, int argc, char *argv[], char *envp[]);
 int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]);
+int exec_if_command(arguments *arg, int argc, char *argv[], char *envp[]);
 
 #endif
