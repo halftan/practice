@@ -10,6 +10,7 @@
 
 #include "main.h"
 #include "arguments.h"
+#include "exec_if.h"
 
 int main(int argc, char *argv[], char *envp[]) {
     char *cmd = NULL;
@@ -32,6 +33,9 @@ int main(int argc, char *argv[], char *envp[]) {
                     switch (stateno) {
                         case EXIT_STATE:
                             printf("Bye~\n");
+                            break;
+                        case IF_STATE:
+                            exec_if_command(&args, argc, argv, envp);
                             break;
                     }
                     break;
@@ -76,6 +80,11 @@ void print_prompt() {
 int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]) {
     if (strcmp("exit", arg->argv[0]) == 0) {
         stateno = EXIT_STATE;
+        return 1;
+    }
+    else if (strcmp("if", arg->argv[0]) == 0)
+    {
+        stateno = IF_STATE;
         return 1;
     }
     return 0;
