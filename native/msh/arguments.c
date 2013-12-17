@@ -30,11 +30,11 @@ void parse_line(char *buf, arguments *arg) {
     bzero(argbuf, sizeof(char) * ARGBUFSIZE);
     for (i = 0, arg_i = 0;
             buf[i]; ++i) {
-        if (buf[i] == ' ') {
+        if (buf[i] == ' ' && argbuf[0] != 0) {
             add_arg(arg, argbuf);
             arg_i = 0;
             bzero(argbuf, sizeof(char) * ARGBUFSIZE);
-        } else {
+        } else if (buf[i] != ' '){
             argbuf[arg_i++] = buf[i];
         }
     }

@@ -9,19 +9,18 @@ int main(int argc, char *argv[], char *envp[]) {
     char *buf = (char*) malloc(sizeof(char) * BUFSIZE);
     arguments args;
     int ret;
-    int scriptd = 0;
     environ = envp;
     flags = 0;
+    scriptf = NULL;
 
     init(argc, argv);
     init_args(&args);
     sprintf(buf, "[%s]$ ", cwd);
 
     if (argc > 1) {
-        if ((scriptd = open(argv[1], O_RDONLY)) < 0)
+        if ((scriptf = fopen(argv[1], "r")) == NULL)
             exit_error(errno, FILE_ERROR);
         else {
-            dup2(scriptd, STDIN_FILENO);
             flags |= SUPPROP;
         }
     }

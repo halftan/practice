@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 
 #include "main.h"
+#include "util.h"
 #include "arguments.h"
 #include "exec_if.h"
 
@@ -85,7 +86,7 @@ void parse_if(arguments *arg, if_arg *args)
   int status = STATUS_OTHER;
   if (strcmp("fi", arg->argv[arg->argc-1]) != 0)
     merge_lines(arg, "fi");
-    
+
   /* int test_i; */
   /* for (test_i = 0; test_i < arg->argc; test_i++) */
   /* { */
@@ -150,25 +151,15 @@ int check_status(arguments *arg, int *ind, int status)
 
 void merge_lines(arguments *arg, const char *word)
 {
-  int i;
   char *line;
-  arguments new_line;
 
-  init_args(&new_line);
-
-  do
-  {
-    clear_arg(&new_line);
-    line = readline("> ");
-    parse_line(line, &new_line);
-    for(i = 0; i < new_line.argc; i++)
-    {
-      if (strcmp(";", new_line.argv[i]) == 0)
+  do {
+    line = msh_readline("> ");
+    if (line == NULL)
         break;
-      add_arg(arg, new_line.argv[i]); 
-    }
-    
-  }while (strcmp(word, new_line.argv[new_line.argc-1]) != 0);
+    parse_line(line, arg);
+    free(line);
+  } while (strcmp(word, arg->argv[arg->argc-1]) != 0);
 }
 
 int exec_then_command(arguments *arg)

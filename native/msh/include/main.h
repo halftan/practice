@@ -24,6 +24,8 @@ char **environ;
 int  stateno;
 uint flags;
 
+FILE *scriptf;
+
 #define SUPPROP      0x00000001
 
 #define EXIT_STATE   0x00000001
