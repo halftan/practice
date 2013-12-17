@@ -1,4 +1,0 @@
-if [ -d . ]
-  then echo true
-  else echo false
-fi

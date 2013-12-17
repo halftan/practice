@@ -17,8 +17,9 @@ int main(int argc, char *argv[], char *envp[]) {
     char *buf = (char*) malloc(sizeof(char) * BUFSIZE);
     arguments args;
     int ret;
+    environ = envp;
 
-    init(argc, argv, envp);
+    init(argc, argv);
     init_args(&args);
     sprintf(buf, "[%s]$ ", cwd);
 
@@ -26,7 +27,7 @@ int main(int argc, char *argv[], char *envp[]) {
     while (stateno != EXIT_STATE
             && (cmd = readline(buf)) != NULL) {
         parse_line(cmd, &args);
-        ret = exec_command(&args, argc, argv, envp);
+        ret = exec_command(&args, argc, argv);
         if (ret != NORMAL) {
             switch (ret) {
                 case CHECK_STATE:
@@ -35,10 +36,10 @@ int main(int argc, char *argv[], char *envp[]) {
                             printf("Bye~\n");
                             break;
                         case IF_STATE:
-                            proc_if_command(&args, argc, argv, envp);
+                            proc_if_command(&args, argc, argv);
                             break;
                         case SCRIPT_STATE:
-                            proc_script_command(&args, argc, argv, envp);
+                            proc_script_command(&args, argc, argv);
                     }
                     break;
             }
@@ -59,7 +60,7 @@ void print_prompt() {
     printf("[%s]$ ", cwd);
 }
 
-int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]) {
+int shell_builtin(arguments *arg, int argc, char *argv[]) {
     if (strcmp("exit", arg->argv[0]) == 0) {
         stateno = EXIT_STATE;
         return 1;
@@ -77,8 +78,8 @@ int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]) {
     return 0;
 }
 
-int exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
-    if (shell_builtin(arg, argc, argv, envp))
+int exec_command(arguments *arg, int argc, char *argv[]) {
+    if (shell_builtin(arg, argc, argv))
         return CHECK_STATE;
     pid_t pid;
     /* print_arg(arg); */
@@ -97,7 +98,7 @@ int exec_command(arguments *arg, int argc, char *argv[], char *envp[]) {
     return NORMAL;
 }
 
-void init(int argc, char *argv[], char *envp[]) {
+void init(int argc, char *argv[]) {
     cwd = (char *) malloc(sizeof(char) * CWDLEN);
     getcwd(cwd, CWDLEN);
     signal(SIGINT, sigint_handler);

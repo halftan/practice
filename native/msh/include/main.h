@@ -5,6 +5,7 @@
 
 #define CWDLEN 200
 char *cwd;
+char **environ;
 
 int  stateno;
 
@@ -18,12 +19,12 @@ int  stateno;
 #define BUFSIZE      200
 #define ARGBUFSIZE   50
 
-void init(int argc, char *argv[], char *envp[]);
+void init(int argc, char *argv[]);
 void sigint_handler(int sig);
 void parse_line(char*, arguments*);
 void print_prompt(void);
-int exec_command(arguments *arg, int argc, char *argv[], char *envp[]);
-int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]);
-int exec_if_command(arguments *arg, int argc, char *argv[], char *envp[]);
+int exec_command(arguments *arg, int argc, char *argv[]);
+int shell_builtin(arguments *arg, int argc, char *argv[]);
+int exec_if_command(arguments *arg, int argc, char *argv[]);
 
 #endif

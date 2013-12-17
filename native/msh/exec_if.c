@@ -9,7 +9,7 @@
 #include "arguments.h"
 #include "exec_if.h"
 
-int proc_if_command(arguments *arg, int argc, char *argv[], char *envp[])
+int proc_if_command(arguments *arg, int argc, char *argv[])
 {
   if_arg args;
   if_arg_init(&args);
@@ -36,7 +36,7 @@ int proc_if_command(arguments *arg, int argc, char *argv[], char *envp[])
   return 0;
 }
 
-int proc_script_command(arguments *arg, int argc, char *argv[], char *envp[])
+int proc_script_command(arguments *arg, int argc, char *argv[])
 {
   arguments line;
   if_arg args;
