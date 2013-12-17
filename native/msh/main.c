@@ -1,33 +1,36 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/wait.h>
-#include <errno.h>
-#include <unistd.h>
-
-#include <readline/readline.h>
-#include <readline/history.h>
-
 #include "main.h"
 #include "arguments.h"
 #include "exec_if.h"
+#include "err_handler.h"
+#include "util.h"
 
 int main(int argc, char *argv[], char *envp[]) {
     char *cmd = NULL;
     char *buf = (char*) malloc(sizeof(char) * BUFSIZE);
     arguments args;
     int ret;
+    int scriptd = 0;
     environ = envp;
+    flags = 0;
 
     init(argc, argv);
     init_args(&args);
     sprintf(buf, "[%s]$ ", cwd);
 
+    if (argc > 1) {
+        if ((scriptd = open(argv[1], O_RDONLY)) < 0)
+            exit_error(errno, FILE_ERROR);
+        else {
+            dup2(scriptd, STDIN_FILENO);
+            flags |= SUPPROP;
+        }
+    }
+
     // Use readline
     while (stateno != EXIT_STATE
-            && (cmd = readline(buf)) != NULL) {
+            && (cmd = msh_readline(buf)) != NULL) {
         parse_line(cmd, &args);
-        ret = exec_command(&args, argc, argv);
+        ret = exec_command(&args);
         if (ret != NORMAL) {
             switch (ret) {
                 case CHECK_STATE:
@@ -36,10 +39,8 @@ int main(int argc, char *argv[], char *envp[]) {
                             printf("Bye~\n");
                             break;
                         case IF_STATE:
-                            proc_if_command(&args, argc, argv);
+                            proc_if_command(&args);
                             break;
-                        case SCRIPT_STATE:
-                            proc_script_command(&args, argc, argv);
                     }
                     break;
             }
@@ -60,26 +61,26 @@ void print_prompt() {
     printf("[%s]$ ", cwd);
 }
 
-int shell_builtin(arguments *arg, int argc, char *argv[]) {
+int shell_builtin(arguments *arg) {
+    if (arg->argc == 0)
+        return 0;
     if (strcmp("exit", arg->argv[0]) == 0) {
         stateno = EXIT_STATE;
         return 1;
-    }
-    else if (strcmp("if", arg->argv[0]) == 0)
-    {
+    } else if (strcmp("if", arg->argv[0]) == 0) {
         stateno = IF_STATE;
         return 1;
-    }
-    else if (strcmp("msh", arg->argv[0]) == 0)
-    {
-        stateno = SCRIPT_STATE;
-        return 1;
+    } else if (strcmp("cd", arg->argv[0]) == 0) {
+        if (arg->argc != 2)
+            return 0;
+        else
+            return msh_chdir(arg->argv[1]);
     }
     return 0;
 }
 
-int exec_command(arguments *arg, int argc, char *argv[]) {
-    if (shell_builtin(arg, argc, argv))
+int exec_command(arguments *arg) {
+    if (shell_builtin(arg))
         return CHECK_STATE;
     pid_t pid;
     /* print_arg(arg); */

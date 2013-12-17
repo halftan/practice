@@ -9,14 +9,14 @@
 #include "arguments.h"
 #include "exec_if.h"
 
-int proc_if_command(arguments *arg, int argc, char *argv[])
+int proc_if_command(arguments *arg)
 {
   if_arg args;
   if_arg_init(&args);
 
   parse_if(arg, &args);
 
-  exec_if(arg, argc, argv, &args);
+  exec_if(arg, &args);
  //int i;
  //printf("Condition:\n");
  //for(i = 0; i < args.condition.argc; i++)
@@ -36,48 +36,7 @@ int proc_if_command(arguments *arg, int argc, char *argv[])
   return 0;
 }
 
-int proc_script_command(arguments *arg, int argc, char *argv[])
-{
-  arguments line;
-  if_arg args;
-  FILE *file;
-  size_t length;
-  ssize_t read = 0;
-
-  init_args(&line);
-  if_arg_init(&args);
-
-
-  file = fopen(arg->argv[1], "r");
-  while((read = getline(line.argv, &length, file)) != -1){
-    printf("%s", line.argv[0]);
-    line.argc = read - 1;
-    printf("%d: %zu\n", line.argc, read);
-    parse_if(&line, &args);
-  }
-
-  /* int i; */
-  /* printf("Condition:\n"); */
-  /* for(i = 0; i < args.condition.argc; i++) */
-  /* { */
-  /*   printf("%s\n", args.condition.argv[i]); */
-  /* } */
-  /* printf("Then:\n"); */
-  /* for(i = 0; i < args.then_command.argc; i++) */
-  /* { */
-  /*   printf("%s\n", args.then_command.argv[i]); */
-  /* } */
-  /* printf("Else:\n"); */
-  /* for(i = 0; i < args.else_command.argc; i++) */
-  /* { */
-  /*   printf("%s\n", args.else_command.argv[i]); */
-  /* } */
-
-  clear_arg(&line);
-  return 0;
-}
-
-int exec_if(arguments *arg, int argc, char *argv[], if_arg *args) 
+int exec_if(arguments *arg, if_arg *args) 
 {
   int ret, stat;
   pid_t pid;

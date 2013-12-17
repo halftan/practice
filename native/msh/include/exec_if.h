@@ -9,9 +9,8 @@ typedef struct _if_arg {
   arguments else_command;
 } if_arg;
 
-int exec_if(arguments *arg, int argc, char *argv[], if_arg *args); 
-int proc_if_command(arguments *arg, int argc, char *argv[]);
-int proc_script_command(arguments *arg, int argc, char *argv[]);
+int exec_if(arguments *argchar, if_arg *args); 
+int proc_if_command(arguments *arg);
 int exec_then_command(arguments *arg);
 int check_status(arguments*, int*, int);
 void parse_if(arguments*, if_arg*);
