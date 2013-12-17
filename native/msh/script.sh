@@ -1,9 +1,6 @@
-echo should print true.
-
-if [ -d . ]
+if [ -d /11 ]
 then
   echo true
 else
   echo false
 fi
-
