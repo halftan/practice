@@ -53,26 +53,6 @@ int main(int argc, char *argv[], char *envp[]) {
     return 0;
 }
 
-void parse_line(char *buf, arguments *arg) {
-    int i, arg_i;
-    char *argbuf = (char*) malloc(sizeof(char) * ARGBUFSIZE);
-
-    bzero(argbuf, sizeof(char) * ARGBUFSIZE);
-    for (i = 0, arg_i = 0;
-            buf[i]; ++i) {
-        if (buf[i] == ' ') {
-            add_arg(arg, argbuf);
-            arg_i = 0;
-            bzero(argbuf, sizeof(char) * ARGBUFSIZE);
-        } else {
-            argbuf[arg_i++] = buf[i];
-        }
-    }
-    if (argbuf[0])
-        add_arg(arg, argbuf);
-}
-
-
 void print_prompt() {
     printf("[%s]$ ", cwd);
 }

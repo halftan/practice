@@ -74,7 +74,7 @@ void parse_if(arguments *arg, if_arg *args)
     {
       add_arg(&args->else_command, arg->argv[i]);
     }
-    
+
   }
 }
 
