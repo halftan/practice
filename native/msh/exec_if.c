@@ -36,7 +36,7 @@ int proc_if_command(arguments *arg)
   return 0;
 }
 
-int exec_if(arguments *arg, if_arg *args) 
+int exec_if(arguments *arg, if_arg *args)
 {
   int ret, stat;
   pid_t pid;
