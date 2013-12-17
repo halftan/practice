@@ -35,8 +35,10 @@ int main(int argc, char *argv[], char *envp[]) {
                             printf("Bye~\n");
                             break;
                         case IF_STATE:
-                            exec_if_command(&args, argc, argv, envp);
+                            proc_if_command(&args, argc, argv, envp);
                             break;
+                        case SCRIPT_STATE:
+                            proc_script_command(&args, argc, argv, envp);
                     }
                     break;
             }
@@ -85,6 +87,11 @@ int shell_builtin(arguments *arg, int argc, char *argv[], char *envp[]) {
     else if (strcmp("if", arg->argv[0]) == 0)
     {
         stateno = IF_STATE;
+        return 1;
+    }
+    else if (strcmp("msh", arg->argv[0]) == 0)
+    {
+        stateno = SCRIPT_STATE;
         return 1;
     }
     return 0;
