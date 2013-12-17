@@ -6,16 +6,17 @@
 #define CWDLEN 200
 char *cwd;
 
-int stateno;
+int  stateno;
 
-#define EXIT_STATE 0x00000001
-#define IF_STATE 0x00000002
+#define EXIT_STATE   0x00000001
+#define IF_STATE     0x00000002
+#define SCRIPT_STATE 0x00000003
 
-#define CHECK_STATE 0x0000000F
-#define NORMAL 0
+#define CHECK_STATE  0x0000000F
+#define NORMAL       0
 
-#define BUFSIZE 200
-#define ARGBUFSIZE 50
+#define BUFSIZE      200
+#define ARGBUFSIZE   50
 
 void init(int argc, char *argv[], char *envp[]);
 void sigint_handler(int sig);
