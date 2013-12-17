@@ -15,7 +15,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
     init(argc, argv);
     init_args(&args);
-    sprintf(buf, "[%s]$ ", cwd);
+    msh_make_prompt(buf);
 
     if (argc > 1) {
         if ((scriptf = fopen(argv[1], "r")) == NULL)
@@ -39,6 +39,10 @@ int main(int argc, char *argv[], char *envp[]) {
                             break;
                         case IF_STATE:
                             proc_if_command(&args);
+                            break;
+                        case CD_STATE:
+                            getcwd(cwd, CWDLEN);
+                            msh_make_prompt(buf);
                             break;
                     }
                     break;
@@ -70,8 +74,10 @@ int shell_builtin(arguments *arg) {
         stateno = IF_STATE;
         return 1;
     } else if (strcmp("cd", arg->argv[0]) == 0) {
-        if (arg->argc != 2)
-            return 0;
+        stateno = CD_STATE;
+        if (arg->argc != 2) {
+            return msh_chdir(getenv("HOME"));
+        }
         else
             return msh_chdir(arg->argv[1]);
     }

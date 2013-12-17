@@ -4,5 +4,6 @@
 #include <readline/readline.h>
 
 int msh_chdir(const char *);
-char *msh_readline(const char *prompt);
+char* msh_readline(const char *prompt);
+char* msh_make_prompt(char *buf);
 #endif

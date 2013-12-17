@@ -4,10 +4,10 @@
 int msh_chdir(const char *path) {
     chdir(path);
     getcwd(cwd, CWDLEN);
-    return 0;
+    return 1;
 }
 
-char *msh_readline(const char *prompt) {
+char* msh_readline(const char *prompt) {
     ssize_t len = 0;
     size_t t = 0;
     if (flags & SUPPROP) {
@@ -23,4 +23,17 @@ char *msh_readline(const char *prompt) {
     }
     else
         return readline(prompt);
+}
+
+char* msh_make_prompt(char *buf) {
+    char *sub;
+    char *home;
+    home = getenv("HOME");
+    sub = strstr(cwd, home);
+    if (sub) {
+        snprintf(buf, BUFSIZE, "[%s%s]$ ", "~", sub + strlen(home));
+    } else {
+        snprintf(buf, BUFSIZE, "[%s]$ ", cwd);
+    }
+    return buf;
 }

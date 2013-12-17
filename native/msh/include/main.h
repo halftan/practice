@@ -30,7 +30,8 @@ FILE *scriptf;
 
 #define EXIT_STATE   0x00000001
 #define IF_STATE     0x00000002
-#define SCRIPT_STATE 0x00000003
+#define CD_STATE     0x00000003
+#define SCRIPT_STATE 0x00000004
 
 #define CHECK_STATE  0x0000000F
 #define NORMAL       0
