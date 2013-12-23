@@ -8,6 +8,8 @@ all : $(NAME)
 
 $(NAME) : $(DEPS)
 	$(CC) $(LDFLAGS) $(DEPS)
+	make snake
+	make more
 
 main.o : main.c
 	$(CC) $(CFLAGS) main.c
@@ -25,4 +27,13 @@ util.o : util.c
 	$(CC) $(CFLAGS) util.c
 
 clean :
-	rm $(DEPS) $(NAME)
+	if [ -x snake ]; then rm snake; fi
+	if [ -x more ]; then rm more; fi
+	if [ -x $(NAME) ]; then rm $(NAME); fi
+	rm *.o
+
+snake : snake.c
+	$(CC) -o snake snake.c -lncurses -pthread
+
+more : more.c
+	$(CC) -o more more.c
