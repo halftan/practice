@@ -1,0 +1,27 @@
+Welcome to the game!
+Snake.
+
+In the game, YOU are a snake to pick up food, try to avoid hitting 
+your own tail or the "walls" that surround the playing area.
+
+Each time the snake eats a piece of food, its tail grows longer! 
+Making the game increasingly difficult!
+
+How to Control?
+
+
+   W                    UP
+
+A  +  D         LEFT    +    RIGHT
+
+   S                   DOWN
+
+You can press + and - to adjust the speed of the snake.
+
+Press + to Make It FASTER!
+Press - to Make It SLOWER!
+
+Press Q to QUIT THE GAME.
+
+ENJOY IT!!!
+Thanks For Playing!
