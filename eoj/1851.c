@@ -35,8 +35,8 @@ void process(int number, int loop) {
         return;
     }
 
-    sums = (deftype*) malloc(sizeof(deftype) * (number-1));
-    memset(sums, 0, sizeof(deftype) * (number-1));
+    sums = (deftype*) malloc(sizeof(deftype) * (number+1));
+    memset(sums, 0, sizeof(deftype) * (number+1));
 
     for (i = 1; i <= number; ++i)
         scanf("%lld", sums + i);

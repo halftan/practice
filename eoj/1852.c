@@ -104,9 +104,9 @@
 #define remainder(a,b) (a-(a/b)*b)
 
 typedef struct _fraction {
-    int   denominator;
-    int   numerator;
-    float magnitude;
+    int    denominator;
+    int    numerator;
+    double magnitude;
 } fraction;
 
 void process(int);
@@ -142,8 +142,8 @@ void process(int n) {
     PUSH_BACK(farray, new_fraction(0,1));
     PUSH_BACK(farray, new_fraction(1,1));
 
-    for (j = 2; j <= n; ++j) {
-        for (i = 1; i < j; ++i) {
+    for (i = 1; i < n; ++i) {
+        for (j = i+1; j <= n; ++j) {
             if (gcd(i,j) == 1) {
                 PUSH_BACK(farray, new_fraction(i,j));
             }
@@ -180,7 +180,7 @@ fraction new_fraction(int numerator, int denominator) {
     fraction ret;
     ret.numerator = numerator;
     ret.denominator = denominator;
-    ret.magnitude = (float) numerator / (float) denominator;
+    ret.magnitude = (double) numerator / (double) denominator;
     /* printf("new fraction %d/%d: %f\n", ret.numerator, ret.denominator, ret.magnitude); */
     return ret;
 }
