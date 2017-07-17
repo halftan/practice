@@ -11,6 +11,7 @@ namespace raytr
         ~Sample() {};
 
         float x, y;
+        int ix, iy;
     };
 
 }

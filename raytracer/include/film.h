@@ -2,19 +2,18 @@
 #define FILM_H 1
 #include <string>
 
+#include "color.h"
+
 namespace raytr
 {
     class Scene;
     class Sample;
-    class Color;
 
     class Film
     {
     public:
-        Film(const Scene &scene);
+        Film(Scene *scene);
         ~Film();
-
-        void initFromScene(const Scene &scene);
 
         void commit(const Sample &sample, const Color &color);
         void savePNG();

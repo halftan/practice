@@ -4,7 +4,7 @@
 
 using namespace raytr;
 
-mat4 lookAt(const vec3 &eye, const vec3 &center, const vec3 &up)
+mat4 raytr::lookAt(const vec3 &eye, const vec3 &center, const vec3 &up)
 {
     vec3 w,u,v,t;
     w = eye / glm::length(eye);
@@ -23,7 +23,7 @@ mat4 lookAt(const vec3 &eye, const vec3 &center, const vec3 &up)
     return ret;
 }
 
-mat4 perspective(float fovy, float aspect, float zNear, float zFar)
+mat4 raytr::perspective(float fovy, float aspect, float zNear, float zFar)
 {
     mat4 ret;
     float theta = fovy / 2;
@@ -39,7 +39,7 @@ mat4 perspective(float fovy, float aspect, float zNear, float zFar)
     return ret;
 }
 
-mat4 scale(const float &sx, const float &sy, const float &sz)
+mat4 raytr::scale(const float &sx, const float &sy, const float &sz)
 {
     mat4 ret;
     ret = mat4(
@@ -51,7 +51,7 @@ mat4 scale(const float &sx, const float &sy, const float &sz)
     return ret;
 }
 
-mat4 translate(const float &tx, const float &ty, const float &tz)
+mat4 raytr::translate(const float &tx, const float &ty, const float &tz)
 {
     mat4 ret;
     ret = mat4(
@@ -73,14 +73,14 @@ mat3 raytr::rotate3(const float degrees, const vec3 &axis)
     float uy = _axis[1];
     float uz = _axis[2];
     mat3 ret;
-    mat3 I(1);
+    mat3 I(1.);
     mat3 A_star(0., uz, -uy, -uz, 0., ux, uy, -ux, 0.);
     mat3 tensor_product(
         ux*ux, ux*uy, ux*uz,
         ux*uy, uy*uy, uy*uz,
         ux*uz, uy*uz, uz*uz
         );
-    ret = I * cosine_val + sine_val * A_star + (1. - cosine_val) * tensor_product;
+    ret = I * cosine_val + sine_val * A_star + (1.f - cosine_val) * tensor_product;
     return ret;
 }
 
@@ -92,7 +92,7 @@ mat4 raytr::rotate4(const float degrees, const vec3 &axis)
     return ret;
 }
 
-void rightMultiply(const mat4 &M, stack<mat4> &transfstack)
+void raytr::rightMultiply(const mat4 &M, stack<mat4> &transfstack)
 {
     mat4 &T = transfstack.top();
     T = T * M;

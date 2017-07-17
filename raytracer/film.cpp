@@ -7,12 +7,16 @@
 #include <FreeImage.h>
 
 using namespace raytr;
+using namespace std;
 
 const int Film::bpp = 24; // Set bits per pixel to 24 for regular RGB
 
-Film::Film(const Scene &scene)
+Film::Film(Scene *scene)
 {
-    this->initFromScene(scene);
+    this->image     = new Color[scene->wsizew * scene->wsizeh];
+    this->width     = scene->wsizew;
+    this->height    = scene->wsizeh;
+    this->ofilename = scene->ofilename;
 }
 
 Film::~Film()
@@ -21,20 +25,11 @@ Film::~Film()
         delete[] this->image;
 }
 
-void Film::initFromScene(const Scene &scene)
-{
-    this->image = new Color[scene.wsizew * scene.wsizeh];
-    this->width = scene.wsizew;
-    this->height = scene.wsizeh;
-    this->ofilename = scene.ofilename;
-}
-
 void Film::commit(const Sample &sample, const Color &color)
 {
-    int x = sample.x - 0.5;
-    int y = sample.y - 0.5;
-
-    if (this->width * y + x < this->width * this->height)
+    int x = sample.ix;
+    int y = sample.iy;
+    if (x < this->width && y < this->height)
         this->image[this->width * y + x] = color;
 }
 
@@ -60,7 +55,7 @@ void Film::savePNG()
                 cquad.rgbRed = color->r * 255;
                 cquad.rgbGreen = color->g * 255;
                 cquad.rgbBlue = color->b * 255;
-                FreeImage_SetPixelColor(bitmap, i, j, &cquad);
+                FreeImage_SetPixelColor(bitmap, i, height - j - 1, &cquad);
             }
         }
 

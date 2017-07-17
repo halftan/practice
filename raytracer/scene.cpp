@@ -6,11 +6,27 @@
 #include <sstream>
 #include <vector>
 #include <stack>
+#include <thread>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "readfile.h"
 #include "transform.h"
+
+#include "sampler.h"
+#include "camera.h"
+#include "color.h"
+#include "vertex.h"
+#include "shape.h"
+#include "sphere.h"
+#include "tri.h"
+#include "film.h"
+#include "ray.h"
+#include "raytracer.h"
+#include "material.h"
+#include "point_light.h"
+#include "direction_light.h"
 
 using namespace raytr;
 using namespace std;
@@ -28,26 +44,44 @@ bool raytr::readvals(stringstream &s, const int numvals, double *values)
 }
 
 Scene::Scene() :
+    objects(vector <Shape*>()),
+    lights(vector <Light*>()),
     wsizew(100), wsizeh(100), maxdepth(5),
     ofilename("raytrace.png"), eyeinit(0.0,0.0,5.0),
     upinit(0.0,1.0,0.0), center(0.0,0.0,0.0), fovy(90.0)
 {
-    sampler = nullptr;
-    film = nullptr;
+    sampler  = nullptr;
+    film     = nullptr;
+    camera   = nullptr;
+    vertices = nullptr;
 }
 
 Scene::~Scene()
 {
-    if (sampler != nullptr)
-        delete sampler;
-    if (film != nullptr)
-        delete film;
+    delete sampler;
+    delete film;
+    delete camera;
+    delete raytracer;
+    if (vertices != nullptr) {
+        for (int i = 0; i < usedverts; ++i) {
+            delete vertices[i];
+        }
+        delete [] vertices;
+    }
+    for (unsigned int i = 0; i < objects.size(); ++i) {
+        delete objects[i];
+    }
+
+    for (unsigned int i = 0; i < lights.size(); ++i) {
+        delete lights[i];
+    }
 }
 
 bool Scene::readfile( const char *filename )
 {
     string str, cmd;
     ifstream in;
+    Material material;
     in.open(filename);
     if (in.is_open()) {
 
@@ -88,19 +122,93 @@ bool Scene::readfile( const char *filename )
                         fovy = values[9];
                     }
                 // Lights
-                } else if (cmd == "") {
-                    if (readvals(ss, 0, values)) {
-                        /* code */
+                } else if (cmd == "directional") {
+                    if (readvals(ss, 6, values)) {
+                        DirectionLight *plight = new DirectionLight(
+                                vec3(values[0], values[1], values[2]),
+                                vec3(values[3], values[4], values[5])
+                                );
+                        lights.push_back(plight);
+                    }
+                } else if (cmd == "point") {
+                    if (readvals(ss, 6, values)) {
+                        PointLight *plight = new PointLight(
+                                vec3(values[0], values[1], values[2]),
+                                vec3(values[3], values[4], values[5])
+                                );
+                        lights.push_back(plight);
+                    }
+                } else if (cmd == "attenuation") {
+                    if (readvals(ss, 3, values)) {
+                        Light::attenuation = vec3(
+                                values[0], values[1], values[2]
+                                );
+                    }
+                } else if (cmd == "ambient") {
+                    if (readvals(ss, 3, values)) {
+                        material.ambient = Color(
+                                values[0], values[1], values[2]
+                                );
                     }
                 // Materials
-                } else if (cmd == "") {
-                    if (readvals(ss, 0, values)) {
-                        /* code */
+                } else if (cmd == "diffuse") {
+                    if (readvals(ss, 3, values)) {
+                        material.diffuse = Color(
+                                values[0], values[1], values[2]
+                                );
+                    }
+                } else if (cmd == "specular") {
+                    if (readvals(ss, 3, values)) {
+                        material.specular = Color(
+                                values[0], values[1], values[2]
+                                );
+                    }
+                } else if (cmd == "emission") {
+                    if (readvals(ss, 3, values)) {
+                        material.emission = Color(
+                                values[0], values[1], values[2]
+                                );
+                    }
+                } else if (cmd == "shininess") {
+                    if (readvals(ss, 1, values)) {
+                        material.shininess = values[0];
                     }
                 // Geometry
                 } else if (cmd == "sphere") {
-                    if (readvals(ss, 0, values)) {
-                        /* code */
+                    if (readvals(ss, 4, values)) {
+                        Sphere *sphere = new Sphere(vec3(
+                                values[0], values[1], values[2]),
+                                    values[3]
+                                    );
+                        sphere->material = material;
+                        sphere->transform = transfstack.top();
+                        objects.push_back(sphere);
+                    }
+                } else if (cmd == "tri") {
+                    if (readvals(ss, 3, values)) {
+                        Tri *tri = new Tri(
+                                    vertices[(int)values[0]],
+                                    vertices[(int)values[1]],
+                                    vertices[(int)values[2]]
+                                    );
+                        tri->transform = transfstack.top();
+                        tri->material = material;
+                        objects.push_back(tri);
+                    }
+                } else if (cmd == "maxverts") {
+                    if (readvals(ss, 1, values)) {
+                        maxverts = values[0];
+                        usedverts = 0;
+                        vertices = new Vertex* [maxverts];
+                    }
+                } else if (cmd == "vertex") {
+                    if (readvals(ss, 3, values)) {
+                        if (usedverts < maxverts) {
+                            vertices[usedverts++] =
+                                new Vertex(values[0], values[1], values[2]);
+                        } else {
+                            cerr << "Exceeded maxverts." << endl;
+                        }
                     }
                 // Transformations
                 } else if (cmd == "translate") {
@@ -147,11 +255,47 @@ bool Scene::readfile( const char *filename )
 
 bool Scene::render()
 {
-    sampler = new Sampler(*this);
-    film = new Film(*this);
-    cout << "The size of the output image is:" << endl << "Width: "
-        << this->wsizew << "\tHeight: " << this->wsizeh << endl;
+    sampler = new Sampler(this);
+    film    = new Film(this);
+    camera  = new Camera(this);
+    raytracer = new Raytracer(this);
+
+    int max_thread = thread::hardware_concurrency();
+    std::thread *threads = new std::thread[max_thread];
+
+    for (int i = 0; i < max_thread; ++i) {
+        threads[i] = std::thread(&Scene::render_thread, this);
+    }
+
+    for (int i = 0; i < max_thread; ++i)
+        threads[i].join();
+
     film->savePNG();
+
+    delete []threads;
+
+    delete sampler;
+    sampler = nullptr;
+    delete film;
+    film = nullptr;
+    delete camera;
+    camera = nullptr;
+    delete raytracer;
+    raytracer = nullptr;
+
     return true;
 }
 
+void Scene::render_thread()
+{
+    Sample sample;
+    Ray ray;
+
+    // Main render loop
+    while(sampler->getSample(&sample)) {
+        Color color;
+        camera->generateRay(sample, &ray);
+        raytracer->trace(ray, &color);
+        film->commit(sample, color);
+    }
+}

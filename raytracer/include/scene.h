@@ -3,15 +3,29 @@
 
 #include <glm/glm.hpp>
 #include <iostream>
+#include <string>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "main.h"
-#include "sampler.h"
-#include "film.h"
+
+#ifndef MAXTHREAD
+#define MAXTHREAD 4
+#endif
+
+using std::vector;
 
 namespace raytr
 {
+    class Sampler;
+    class Film;
+    class Camera;
+    class Raytracer;
+    class Shape;
+    class Vertex;
+    class Light;
+
     class Scene
     {
     public:
@@ -20,12 +34,14 @@ namespace raytr
         bool readfile(const char *filename);
         bool render();
 
-        friend void Sampler::initFromScene(const Scene &scene);
-        friend void Film::initFromScene(const Scene &scene);
+        Sampler   *sampler;
+        Film      *film;
+        Camera    *camera;
+        Raytracer *raytracer;
 
-    private:
-        Sampler *sampler;
-        Film *film;
+        Vertex **vertices;
+        vector <Shape*> objects;
+        vector <Light*> lights;
 
         int wsizew, wsizeh; // window size width & height
         int maxdepth;       // maximum depth for a ray. default to 5;
@@ -35,6 +51,11 @@ namespace raytr
         vec3 upinit;
         vec3 center;
         float fovy;
+
+    private:
+        int maxverts;
+        int usedverts;
+        void render_thread();
     };
 
 }

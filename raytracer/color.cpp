@@ -3,7 +3,7 @@
 using namespace raytr;
 
 Color::Color()
-    : r(.0), g(.0), b(.0) {}
+    : r(0), g(0), b(0) {}
 
 Color::Color(float x)
     : r(x), g(x), b(x) {}

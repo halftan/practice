@@ -2,6 +2,7 @@
 #define SAMPLER_H 1
 
 #include <iostream>
+#include <mutex>
 #include <vector>
 
 #include "sample.h"
@@ -13,16 +14,17 @@ namespace raytr
     class Sampler
     {
     public:
-        Sampler(const Scene &scene);
+        Sampler(Scene *scene);
         ~Sampler() {}
 
         bool getSample(Sample *sample);
-        void initFromScene(const Scene &scene);
+        float progress();
     private:
         int max_x;
         int max_y;
         int current_x;
         int current_y;
+        std::mutex lock;
     };
 }
 #endif
